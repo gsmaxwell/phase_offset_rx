@@ -187,14 +187,16 @@ digital_ofdm_frame_acquisition::general_work(int noutput_items,
   int unoccupied_carriers = d_fft_length - d_occupied_carriers;
   int zeros_on_left = (int)ceil(unoccupied_carriers/2.0);
   gr_complex phase[52] = {};//cyjadd
+  gr_complex sum_phase = 0;//cyjadd
   float angle[52] = {};//cyjadd
-  int PilotCount = 0;
+  int PilotCount = 0;//cyjadd
   gr_complex Pilot = 0;//cyjadd
   if(signal_in[0]) {
     d_phase_count = 1;
     correlate(symbol, zeros_on_left);
     calculate_equalizer(symbol, zeros_on_left);
     signal_out[0] = 1;
+    std::cout<<"preamble"<<std::endl;//cyjadd
   }
   else {
     signal_out[0] = 0;
@@ -204,21 +206,24 @@ digital_ofdm_frame_acquisition::general_work(int noutput_items,
     out[i] = d_hestimate[i]*coarse_freq_comp(d_coarse_freq,d_phase_count)
       *symbol[i+zeros_on_left+d_coarse_freq];
     //std::cout<<"i:"<<i<<"out:"<<out[i]<<"mag:"<<sqrt(pow(out[i].real(), 2)+pow(out[i].imag(), 2))<<std::endl;//cyjadd
-    if(i==6 || i==20 || i==34 || i ==48)//cyjadd
+    if(i==6 || i==7 || i==8 || i ==9)//cyjadd
 	{
          PilotCount ++;//cyjadd
-	 /*switch (i)
-	 {	case 6: {Pilot = gr_complex(-1,0);break;}
-		case 20: {Pilot = gr_complex(-1,0);break;}
-		case 34: {Pilot = gr_complex(-1,0);break;}
-		case 48: {Pilot = gr_complex(-1,0);break;}
-	 }*/
-         phase[i] = gr_complex(-1,0)*coarse_freq_comp(d_coarse_freq,d_phase_count)*symbol[i+zeros_on_left+d_coarse_freq]*std::conj((gr_complex(1,0)/d_hestimate[i]));//cyjadd
+	 switch (i)
+	 {	case 6: {Pilot = gr_complex(1,0);break;}
+		case 7: {Pilot = gr_complex(1,0);break;}
+		case 8: {Pilot = gr_complex(1,0);break;}
+		case 9: {Pilot = gr_complex(-1,0);break;}
+	 }
+	 //std::cout<<"i:"<<i<<" Pilot:"<<Pilot<<std::endl;//cyjadd
+         phase[i] = Pilot*coarse_freq_comp(d_coarse_freq,d_phase_count)*symbol[i+zeros_on_left+d_coarse_freq]*std::conj((gr_complex(1,0)/d_hestimate[i]));//cyjadd
          angle[i] = gr_fast_atan2f(phase[i]);//cyjadd
+         sum_phase += phase[i];
 	 std::cout<<"i:"<<i<<" phase:"<<phase[i]<<" angle:"<<angle[i]<<" degree:"<<angle[i]*360/(2*M_PI)<<std::endl;//cyjadd
 	 if (PilotCount==4)
-	 {PilotCount =0;
-	  
+	 {
+	  PilotCount =0;
+	  std::cout<<"sum_phase:"<<sum_phase<<" sum_degree:"<<gr_fast_atan2f(sum_phase)*360/(2*M_PI)<<std::endl;
 	  std::cout<<std::endl;
 	  }
 	}
