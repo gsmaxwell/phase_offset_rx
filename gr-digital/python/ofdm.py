@@ -27,6 +27,7 @@ import ofdm_packet_utils
 from ofdm_receiver import ofdm_receiver
 import gnuradio.gr.gr_threading as _threading
 import psk, qam
+from howto import howto_swig#cyjadd
 
 # /////////////////////////////////////////////////////////////////////////////
 #                   mod/demod with packets as i/o
@@ -108,8 +109,9 @@ class ofdm_mod(gr.hier_block2):
         self.cp_adder = digital_swig.ofdm_cyclic_prefixer(self._fft_length,
                                                           symbol_length)
         self.scale = gr.multiply_const_cc(1.0 / math.sqrt(self._fft_length))
-        
-        self.connect((self._pkt_input, 0), (self.preambles, 0))
+        self.freqoffset = howto_swig.multiply_const1_cc(1,self._fft_length)# cyjadd
+	self.connect((self._pkt_input, 0),self.freqoffset, (self.preambles, 0))# cyjadd
+        #self.connect((self._pkt_input, 0), (self.preambles, 0))
         self.connect((self._pkt_input, 1), (self.preambles, 1))
         self.connect(self.preambles, self.ifft, self.cp_adder, self.scale, self)
         
@@ -265,6 +267,9 @@ class ofdm_demod(gr.hier_block2):
             self._print_verbage()
             
         self._watcher = _queue_watcher_thread(self._rcvd_pktq, callback)
+   
+    def snr(self):#cyjadd
+        return self.ofdm_recv.snr()#cyjadd
 
     def add_options(normal, expert):
         """

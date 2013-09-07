@@ -67,6 +67,8 @@ def main():
     n_rcvd = 0
     n_right = 0
 
+    def snr():#cyjadd
+        return tb.rxpath.snr()#cyjadd
     def rx_callback(ok, payload):
         global n_rcvd, n_right
         n_rcvd += 1
@@ -80,8 +82,7 @@ def main():
 	'''
         if ok:
             n_right += 1
-        print "ok: %r \t pktno: %d \t n_rcvd: %d \t n_right: %d" % (ok, pktno, n_rcvd, n_right)
-
+        print "ok: %r \t pktno: %d \t n_rcvd: %d \t n_right: %d \t SNR: %f" % (ok, pktno, n_rcvd, n_right, snr())#cyjadd snr()
         if 0:
             printlst = list()
             for x in payload[2:]:
@@ -93,6 +94,7 @@ def main():
 
             print printable
             print "\n"
+    
 
     parser = OptionParser(option_class=eng_option, conflict_handler="resolve")
     expert_grp = parser.add_option_group("Expert")

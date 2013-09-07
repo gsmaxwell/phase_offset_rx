@@ -123,6 +123,12 @@ unsigned int digital_ofdm_frame_sink::demapper(const gr_complex *in,
     //while((d_byte_offset < 8) && (i < d_occupied_carriers)) {
     while((d_byte_offset < 8) && (i < d_subcarrier_map.size())) {
       //gr_complex sigrot = in[i]*carrier*d_dfe[i];
+      if(i==6 || i==20 || i==32 || i==46)
+	{
+	 i++;
+	 continue;
+	}//cyjadd
+	
       gr_complex sigrot = in[d_subcarrier_map[i]]*carrier*d_dfe[i];
       
       if(d_derotated_output != NULL){

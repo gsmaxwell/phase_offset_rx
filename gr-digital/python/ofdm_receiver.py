@@ -128,7 +128,7 @@ class ofdm_receiver(gr.hier_block2):
                                                                   cp_length, ks[0])
 
         #self.correctfreqoffset = howto_swig.multiply_const1_cc(1)#cyjadd
-        
+        self.SnrEstimator = digital_swig.mpsk_snr_est_cc(digital_swig.SNR_EST_SIMPLE,1000,0.001)#cyjadd
 	#self.connect(self, self.chan_filt, self.correctfreqoffset) #cyjadd
         self.connect(self, self.chan_filt)                            # filter the input channel
         self.connect(self.chan_filt, self.ofdm_sync)                  # into the synchronization alg.
@@ -143,6 +143,7 @@ class ofdm_receiver(gr.hier_block2):
         self.connect((self.sampler,1), (self.ofdm_frame_acq,1))       # send timing signal to signal frame start
         self.connect((self.ofdm_frame_acq,0), (self,0))               # finished with fine/coarse freq correction,
         self.connect((self.ofdm_frame_acq,1), (self,1))               # frame and symbol timing, and equalization
+	self.connect((self.ofdm_frame_acq,0), self.SnrEstimator, gr.file_sink(gr.sizeof_gr_complex*occupied_tones, "SNR.dat")) #cyjadd
 
         if logging:
             self.connect(self.chan_filt, gr.file_sink(gr.sizeof_gr_complex, "ofdm_receiver-chan_filt_c.dat"))
@@ -154,3 +155,6 @@ class ofdm_receiver(gr.hier_block2):
             self.connect(self.sigmix, gr.file_sink(gr.sizeof_gr_complex, "ofdm_receiver-sigmix_c.dat"))
             self.connect(self.nco, gr.file_sink(gr.sizeof_gr_complex, "ofdm_receiver-nco_c.dat"))
 	    self.connect(self.fft_demod, gr.file_sink(gr.sizeof_gr_complex*fft_length, "ofdm_const_before_equalizaiton.dat"))#cyjadd
+
+    def snr(self):#cyjadd
+        return self.SnrEstimator.snr()#cyjadd

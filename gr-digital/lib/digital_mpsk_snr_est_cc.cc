@@ -27,7 +27,7 @@
 #include <digital_mpsk_snr_est_cc.h>
 #include <gr_io_signature.h>
 #include <cstdio>
-
+#include <iostream>//cyjadd
 digital_mpsk_snr_est_cc_sptr
 digital_make_mpsk_snr_est_cc(snr_est_type_t type,
 			     int tag_nsamples,
@@ -41,8 +41,9 @@ digital_mpsk_snr_est_cc::digital_mpsk_snr_est_cc(snr_est_type_t type,
 						 int tag_nsamples,
 						 double alpha)
   : gr_sync_block ("mpsk_snr_est_cc",
-		   gr_make_io_signature(1, 1, sizeof(gr_complex)),
-		   gr_make_io_signature(1, 1, sizeof(gr_complex)))
+		   gr_make_io_signature(1, 1, sizeof(gr_complex)*52),//cyjadd 52
+		   gr_make_io_signature(1, 1, sizeof(gr_complex)*52))//cyjadd  52
+	           
 {
   d_snr_est = NULL;
 
@@ -105,7 +106,7 @@ digital_mpsk_snr_est_cc::work(int noutput_items,
   x = noutput_items - index;
   d_count += x;
   d_snr_est->update(x, &in[index]);
-  
+  std::cout<<noutput_items<<std::endl;//cyjadd
   return noutput_items;
 }
 

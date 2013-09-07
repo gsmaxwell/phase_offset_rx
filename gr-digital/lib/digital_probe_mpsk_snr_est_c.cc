@@ -27,7 +27,7 @@
 #include <digital_probe_mpsk_snr_est_c.h>
 #include <gr_io_signature.h>
 #include <cstdio>
-
+#include <iostream>//cyjadd
 digital_probe_mpsk_snr_est_c_sptr
 digital_make_probe_mpsk_snr_est_c(snr_est_type_t type,
 				  int msg_nsamples,
@@ -72,6 +72,7 @@ digital_probe_mpsk_snr_est_c::work(int noutput_items,
 			      gr_vector_void_star &output_items)
 {
   const gr_complex *in = (const gr_complex*)input_items[0];
+  //std::cout<<d_snr_est->snr()<<std::endl;//cyjadd
   return d_snr_est->update(noutput_items, in);
 }
 

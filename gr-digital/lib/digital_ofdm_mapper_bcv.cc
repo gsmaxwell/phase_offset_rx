@@ -166,6 +166,12 @@ digital_ofdm_mapper_bcv::work(int noutput_items,
   //while((d_msg_offset < d_msg->length()) && (i < d_occupied_carriers)) {
   while((d_msg_offset < d_msg->length()) && (i < d_subcarrier_map.size())) {
 
+    if(i==6 || i==20 || i==32 ||i==46)
+	{
+	out[d_subcarrier_map[i]] = gr_complex(1,0);
+	i++;
+	continue;//cyjadd
+	}
     // need new data to process
     if(d_bit_offset == 0) {
       d_msgbytes = d_msg->msg()[d_msg_offset];
@@ -222,8 +228,8 @@ digital_ofdm_mapper_bcv::work(int noutput_items,
 
     //while(i < d_occupied_carriers) {   // finish filling out the symbol
     while(i < d_subcarrier_map.size()) {   // finish filling out the symbol
-      out[d_subcarrier_map[i]] = d_constellation[randsym()];
-
+      //out[d_subcarrier_map[i]] = d_constellation[randsym()];
+      out[d_subcarrier_map[i]] = gr_complex(1,0);//cyjadd 
       i++;
     }
 

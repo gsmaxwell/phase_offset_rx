@@ -82,7 +82,9 @@ class receive_path(gr.hier_block2):
         """
         self.probe.set_threshold(threshold_in_db)
     
-        
+    def snr(self):#cyjadd
+        return self.ofdm_rx.snr()#cyjadd
+   
     def add_options(normal, expert):
         """
         Adds receiver-specific options to the Options Parser

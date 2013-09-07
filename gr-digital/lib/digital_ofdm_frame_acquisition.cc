@@ -32,10 +32,19 @@
 #include <stdexcept>//cyjadd
 #include <cmath>//cyjadd
 #include <iostream>//cyjadd
+#include <fstream>//cyjadd
+#include <gr_fxpt.h>//cyjadd
 #define VERBOSE 0
 #define M_TWOPI (2*M_PI)
 #define MAX_NUM_SYMBOLS 1000
 
+static int SymbolCount = 0;//cyjadd
+static long int PreambleCount = 0;//cyjadd
+static const bool EncodeArray[] = {1,0,1,0,1,1,0,1,0,1,0,0,1,1,1,1,1,0,1,1,1,0,0,1,0,0,1,0,0,1,0,0,1,1,1,0,0,1,1,0,1,0,1,0,1,0,1,1,1,0,0,0,1,1,0,1,0,1,0,1};//cyjadd
+const int ArrayLen = sizeof(EncodeArray)/sizeof(EncodeArray[0]);//cyjadd
+static bool DecodeArray[ArrayLen] = {};//cyjadd
+static float NextAngle = 0;//cyjadd
+static float BER = 0;
 digital_ofdm_frame_acquisition_sptr
 digital_make_ofdm_frame_acquisition (unsigned int occupied_carriers,
 				     unsigned int fft_length, 
@@ -68,7 +77,7 @@ digital_ofdm_frame_acquisition::digital_ofdm_frame_acquisition (unsigned occupie
   d_hestimate.resize(d_occupied_carriers);
 
   unsigned int i = 0, j = 0;
-
+  
   std::fill(d_known_phase_diff.begin(), d_known_phase_diff.end(), 0);
   for(i = 0; i < d_known_symbol.size()-2; i+=2) {
     d_known_phase_diff[i] = norm(d_known_symbol[i] - d_known_symbol[i+2]);
@@ -190,45 +199,122 @@ digital_ofdm_frame_acquisition::general_work(int noutput_items,
   gr_complex sum_phase = 0;//cyjadd
   float angle[52] = {};//cyjadd
   int PilotCount = 0;//cyjadd
+  int PreambleFlag = 0;//cyjadd
   gr_complex Pilot = 0;//cyjadd
+  gr_complex TempOut[52] = {};//cyjadd
+  float DiffAngle = 0;
+  float oi, oq;//cyjadd
+  std::fstream file("/home/wangwei/src/pilot.txt",std::ios::out|std::ios::app);//cyjadd app表示多次写入文件
   if(signal_in[0]) {
     d_phase_count = 1;
     correlate(symbol, zeros_on_left);
     calculate_equalizer(symbol, zeros_on_left);
     signal_out[0] = 1;
-    std::cout<<"preamble"<<std::endl;//cyjadd
+    //if (PreambleCount > 1000 && PreambleCount < 2000)
+    	//file<<"SymbolCount: "<<SymbolCount<<std::endl;//cyjadd only for test
+    PreambleCount ++;//cyjadd
+    PreambleFlag = 1;//cyjadd
+    SymbolCount = 0;//cyjadd clear the symbolCount for the new packet
+    NextAngle = 0;//cyjadd clear the angle state for new packet
+    if (PreambleCount > 1000 && PreambleCount < 2000)
+    {//std::cout<<"preamble"<<std::endl;//cyjadd preamble marker
+    file<<PreambleCount<<std::endl;//cyjadd
+    } 
   }
   else {
     signal_out[0] = 0;
+    PreambleFlag = 0;//cyjadd
   } 
 
+  if (PreambleFlag != 1)
+  	SymbolCount++;//cyjadd	
   for(unsigned int i = 0; i < d_occupied_carriers; i++) {
-    out[i] = d_hestimate[i]*coarse_freq_comp(d_coarse_freq,d_phase_count)
-      *symbol[i+zeros_on_left+d_coarse_freq];
+    
     //std::cout<<"i:"<<i<<"out:"<<out[i]<<"mag:"<<sqrt(pow(out[i].real(), 2)+pow(out[i].imag(), 2))<<std::endl;//cyjadd
-    if(i==6 || i==7 || i==8 || i ==9)//cyjadd
-	{
-         PilotCount ++;//cyjadd
-	 switch (i)
-	 {	case 6: {Pilot = gr_complex(1,0);break;}
-		case 7: {Pilot = gr_complex(1,0);break;}
-		case 8: {Pilot = gr_complex(1,0);break;}
-		case 9: {Pilot = gr_complex(-1,0);break;}
-	 }
-	 //std::cout<<"i:"<<i<<" Pilot:"<<Pilot<<std::endl;//cyjadd
-         phase[i] = Pilot*coarse_freq_comp(d_coarse_freq,d_phase_count)*symbol[i+zeros_on_left+d_coarse_freq]*std::conj((gr_complex(1,0)/d_hestimate[i]));//cyjadd
-         angle[i] = gr_fast_atan2f(phase[i]);//cyjadd
-         sum_phase += phase[i];
-	 std::cout<<"i:"<<i<<" phase:"<<phase[i]<<" angle:"<<angle[i]<<" degree:"<<angle[i]*360/(2*M_PI)<<std::endl;//cyjadd
-	 if (PilotCount==4)
-	 {
-	  PilotCount =0;
-	  std::cout<<"sum_phase:"<<sum_phase<<" sum_degree:"<<gr_fast_atan2f(sum_phase)*360/(2*M_PI)<<std::endl;
-	  std::cout<<std::endl;
-	  }
-	}
+	   
+  	if (PreambleFlag != 1)
+ 	  {
+		if(i==6 || i==20 || i==34 || i ==48)//cyjadd
+		{
+			 PilotCount ++;//cyjadd
+			 switch (i)
+			 {	case 6: {Pilot = gr_complex(1,0);break;}
+				case 20: {Pilot = gr_complex(1,0);break;}
+				case 34: {Pilot = gr_complex(1,0);break;}
+				case 48: {Pilot = gr_complex(1,0);break;}
+			 }
+			 phase[i] = Pilot*coarse_freq_comp(d_coarse_freq,d_phase_count)*symbol[i+zeros_on_left+d_coarse_freq]*std::conj((gr_complex(1,0)/d_hestimate[i]));//cyjadd
+			 angle[i] = gr_fast_atan2f(phase[i]);//cyjadd
+			 sum_phase += phase[i];
+			 //std::cout<<"i:"<<i<<" phase:"<<phase[i]<<" angle:"<<angle[i]<<" degree:"<<angle[i]*360/(2*M_PI)<<std::endl;//cyjadd
+			 //if (PreambleCount > 2000 && PreambleCount < 3000)
+			 	//file<<angle[i]*360/(2*M_PI)<<std::endl;//cyjadd
+			 
+			 if (PilotCount==4)
+			 {
+			  
+				PilotCount =0;
+				//std::cout<<"sum_phase:"<<sum_phase<<" sum_degree:"<<gr_fast_atan2f(sum_phase)*360/(2*M_PI)<<std::endl;
+				gr_int32 angle = gr_fxpt::float_to_fixed (gr_fast_atan2f(sum_phase));
+				gr_fxpt::sincos (angle, &oq, &oi);//cyjadd
+				if (PreambleCount > 1000 && PreambleCount < 2000)
+				{					
+				    //file<<gr_fast_atan2f(sum_phase)*360/(2*M_PI)<<std::endl;//cyjadd
+				    //file<<std::endl;//cyjadd
+				}
+
+			  }
+		}
+	   }
+	
+   	TempOut[i] = d_hestimate[i]*coarse_freq_comp(d_coarse_freq,d_phase_count)*symbol[i+zeros_on_left+d_coarse_freq];//cyjadd
   }
+  //file.close();//cyjadd
+  /*compensate the symbol with phase offset using pilot*/
   
+  if (PreambleFlag != 1)
+   {
+	for(unsigned int i = 0; i < d_occupied_carriers; i++)
+  	{
+   	 TempOut[i] = TempOut[i]/gr_complex (oi, oq);//cyjadd
+  	}
+   }
+   
+  memcpy(out, TempOut, sizeof(gr_complex)*d_occupied_carriers);//cyjadd
+  /*start for decoding for phase offset*/
+  /*
+  if (PreambleCount > 1000 && PreambleCount < 2000)//cyjadd
+     {
+	  if (SymbolCount>1 && SymbolCount<=ArrayLen+1)//cyjadd
+	   {
+		DiffAngle = gr_fast_atan2f(sum_phase)*360/(2*M_PI) - NextAngle;
+		
+		if(DiffAngle > 180)
+		   DiffAngle -=360;
+		if(DiffAngle < -180)
+		   DiffAngle +=360;
+		if(DiffAngle > 0 && DiffAngle <180)
+		   DecodeArray[SymbolCount-2] = 1;
+		if(DiffAngle <0 && DiffAngle > -180)
+		   DecodeArray[SymbolCount-2] = 0;
+		if(SymbolCount==ArrayLen+1)//cyjadd finish decoding for phase offset 
+		  {
+		    int ErrorCount = 0;
+                    for(int i =0; i<ArrayLen; i++)
+		       {
+			  //file<<DecodeArray[i]<<" ";//cyjadd
+			  if(DecodeArray[i] - EncodeArray[i] !=0)
+			       ErrorCount++;
+		       }
+		    DecodeArray[ArrayLen] = 0;//cyjadd clear the decodeArray
+		    BER = (float)ErrorCount/(float)ArrayLen;//cyjadd
+		    file<<"bitlen:"<<ArrayLen<<" ErrorCount:"<<ErrorCount<<" BER:"<<BER<<std::endl;//cyjadd
+		  }
+		   
+	   }
+	   NextAngle = gr_fast_atan2f(sum_phase)*360/(2*M_PI);
+      }
+  */
   d_phase_count++;
   if(d_phase_count == MAX_NUM_SYMBOLS) {
     d_phase_count = 1;
